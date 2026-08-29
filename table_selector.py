@@ -1,9 +1,42 @@
-import re
-
-from database import engine
+﻿from database import engine
 from sqlalchemy import inspect, text
-
 from schema_memory import clean_email
+
+
+# ============================================================
+# BUILT-IN SYSTEM / BUSINESS TABLES
+# ============================================================
+
+BUILTIN_TABLES = {
+    "products",
+    "order_items",
+    "orders",
+    "payments",
+    "customers",
+    "reviews",
+}
+
+
+# ============================================================
+# SYSTEM TABLES - NEVER SELECT AS USER DATA
+# ============================================================
+
+SYSTEM_TABLES = {
+    "users",
+    "workspace",
+    "workspaces",
+    "schema_memory",
+    "dataset_memory",
+    "dataset_profiles",
+    "business_memory",
+    "relationship_memory",
+    "document_memory",
+    "chat_memory",
+    "chat_history",
+    "projects",
+    "subscriptions",
+    "usage_tracking",
+}
 
 
 # ============================================================
@@ -16,27 +49,23 @@ def get_all_tables():
 
     tables = inspector.get_table_names()
 
-    excluded = {
-        "users",
-        "workspace",
-        "schema_memory",
-        "dataset_memory"
-    }
-
     return [
         table
         for table in tables
-        if table not in excluded
+        if table not in SYSTEM_TABLES
     ]
 
 
 # ============================================================
-# GET USER UPLOADED DATASETS
+# GET USER OWNED DATASETS
 # ============================================================
 
 def get_uploaded_datasets(user_email):
 
     user_email = clean_email(user_email)
+
+    if not user_email:
+        return []
 
     try:
 
@@ -45,7 +74,7 @@ def get_uploaded_datasets(user_email):
             result = conn.execute(
                 text("""
                     SELECT DISTINCT dataset_name
-                    FROM dataset_memory
+                    FROM dataset_profiles
                     WHERE user_email = :user_email
                     ORDER BY dataset_name
                 """),
@@ -59,9 +88,14 @@ def get_uploaded_datasets(user_email):
             return [
                 row[0]
                 for row in rows
+                if row[0]
             ]
 
-    except Exception:
+    except Exception as e:
+
+        print(
+            f"Could not load user datasets: {e}"
+        )
 
         return []
 
@@ -99,6 +133,8 @@ def normalize_text(text_value):
     text_value = str(
         text_value
     ).lower()
+
+    import re
 
     text_value = re.sub(
         r"[^a-z0-9_ ]",
@@ -176,6 +212,7 @@ def score_table(
     # --------------------------------------------------------
 
     business_keywords = {
+
         "sales": [
             "revenue",
             "sales",
@@ -230,7 +267,6 @@ def score_table(
         )
 
         if not category_match:
-
             continue
 
         for column in columns:
@@ -262,32 +298,71 @@ def select_relevant_tables(
         user_email
     )
 
+    if not user_email:
+
+        print(
+            "ERROR: User email is required."
+        )
+
+        return []
+
     print(
-        "🔍 Finding available tables..."
+        "Finding available tables..."
     )
 
     all_tables = get_all_tables()
 
-    print(
-        "📋 Available tables:"
-    )
-
-    for table in all_tables:
-
-        print(
-            f"• {table}"
-        )
-
     # --------------------------------------------------------
-    # USER UPLOADED DATASETS
+    # GET USER-OWNED DATASETS
     # --------------------------------------------------------
 
     uploaded = get_uploaded_datasets(
         user_email
     )
 
+    uploaded_set = set(
+        uploaded
+    )
+
+    # --------------------------------------------------------
+    # IMPORTANT SECURITY BOUNDARY
+    #
+    # A physical table is considered selectable if:
+    #
+    # 1. It is a built-in business table, OR
+    # 2. It belongs to this user.
+    #
+    # Every other table is ignored.
+    # --------------------------------------------------------
+
+    selectable_tables = []
+
+    for table in all_tables:
+
+        if table in BUILTIN_TABLES:
+
+            selectable_tables.append(
+                table
+            )
+
+        elif table in uploaded_set:
+
+            selectable_tables.append(
+                table
+            )
+
     print(
-        "\n📂 Uploaded datasets:"
+        "Available tables for this user:"
+    )
+
+    for table in selectable_tables:
+
+        print(
+            f"• {table}"
+        )
+
+    print(
+        "\nUploaded datasets owned by this user:"
     )
 
     if uploaded:
@@ -305,16 +380,12 @@ def select_relevant_tables(
         )
 
     # --------------------------------------------------------
-    # SCORE TABLES
+    # SCORE ONLY SAFE TABLES
     # --------------------------------------------------------
-
-    print(
-        "\n🧠 Selecting relevant tables..."
-    )
 
     scored_tables = []
 
-    for table in all_tables:
+    for table in selectable_tables:
 
         columns = get_table_columns(
             table
@@ -326,8 +397,8 @@ def select_relevant_tables(
             columns
         )
 
-        # Uploaded datasets get priority
-        if table in uploaded:
+        # Give owned datasets priority.
+        if table in uploaded_set:
 
             score += 20
 
@@ -356,10 +427,8 @@ def select_relevant_tables(
         for table, score in scored_tables:
 
             if score <= 0:
-
                 continue
 
-            # Keep tables close to the best match
             if score >= max(
                 1,
                 best_score - 5
@@ -370,19 +439,20 @@ def select_relevant_tables(
                 )
 
             if len(selected) >= 5:
-
                 break
 
     # --------------------------------------------------------
-    # IF AN UPLOADED DATASET EXISTS,
-    # PREFER IT WHEN IT HAS A STRONG MATCH
+    # STRONG USER DATASET MATCH
     # --------------------------------------------------------
 
     uploaded_matches = []
 
     for table, score in scored_tables:
 
-        if table in uploaded and score > 0:
+        if (
+            table in uploaded_set
+            and score > 0
+        ):
 
             uploaded_matches.append(
                 (
@@ -399,9 +469,6 @@ def select_relevant_tables(
         )
 
         best_uploaded = uploaded_matches[0]
-
-        # If uploaded dataset has a meaningful match,
-        # use it instead of unrelated legacy tables.
 
         if best_uploaded[1] >= 8:
 
@@ -420,7 +487,7 @@ def select_relevant_tables(
     )
 
     print(
-        "✅ Selected tables:"
+        "\nSelected tables:"
     )
 
     for table in selected:

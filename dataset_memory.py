@@ -1,4 +1,4 @@
-from database import engine
+﻿from database import engine
 from sqlalchemy import text
 import json
 
@@ -20,18 +20,15 @@ def create_dataset_memory_table():
 
         profile JSONB NOT NULL,
 
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        UNIQUE(user_email, dataset_name)
 
     );
     """
 
-    with engine.connect() as conn:
-
-        conn.execute(
-            text(query)
-        )
-
-        conn.commit()
+    with engine.begin() as conn:
+        conn.execute(text(query))
 
 
 # =====================================================
@@ -43,6 +40,26 @@ def save_dataset_memory(
     dataset_name,
     profile
 ):
+
+    user_email = str(
+        user_email
+    ).strip().lower()
+
+    dataset_name = str(
+        dataset_name
+    ).strip()
+
+    if not user_email:
+        raise ValueError(
+            "User email is required."
+        )
+
+    if not dataset_name:
+        raise ValueError(
+            "Dataset name is required."
+        )
+
+    create_dataset_memory_table()
 
     query = """
     INSERT INTO dataset_memory
@@ -56,22 +73,34 @@ def save_dataset_memory(
     (
         :user_email,
         :dataset_name,
-        :profile
-    );
+        CAST(:profile AS JSONB)
+    )
+
+    ON CONFLICT (
+        user_email,
+        dataset_name
+    )
+
+    DO UPDATE SET
+
+        profile = EXCLUDED.profile,
+
+        created_at = CURRENT_TIMESTAMP;
     """
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
 
         conn.execute(
             text(query),
             {
                 "user_email": user_email,
                 "dataset_name": dataset_name,
-                "profile": json.dumps(profile)
+                "profile": json.dumps(
+                    profile,
+                    default=str
+                )
             }
         )
-
-        conn.commit()
 
 
 # =====================================================
@@ -83,6 +112,16 @@ def get_dataset_memory(
     dataset_name
 ):
 
+    user_email = str(
+        user_email
+    ).strip().lower()
+
+    dataset_name = str(
+        dataset_name
+    ).strip()
+
+    create_dataset_memory_table()
+
     query = """
     SELECT profile
 
@@ -91,8 +130,6 @@ def get_dataset_memory(
     WHERE user_email = :user_email
 
     AND dataset_name = :dataset_name
-
-    ORDER BY id DESC
 
     LIMIT 1;
     """
@@ -109,11 +146,160 @@ def get_dataset_memory(
 
         row = result.fetchone()
 
-        if row:
-
-            return row[0]
-
+    if not row:
         return None
+
+    profile = row[0]
+
+    if isinstance(profile, str):
+
+        return json.loads(profile)
+
+    return profile
+
+
+# =====================================================
+# GET ALL USER DATASETS
+# =====================================================
+
+def get_user_datasets(user_email):
+
+    user_email = str(
+        user_email
+    ).strip().lower()
+
+    if not user_email:
+        return []
+
+    create_dataset_memory_table()
+
+    query = """
+    SELECT
+        dataset_name,
+        profile,
+        created_at
+
+    FROM dataset_memory
+
+    WHERE user_email = :user_email
+
+    ORDER BY created_at DESC;
+    """
+
+    with engine.connect() as conn:
+
+        result = conn.execute(
+            text(query),
+            {
+                "user_email": user_email
+            }
+        )
+
+        rows = result.fetchall()
+
+    datasets = []
+
+    for row in rows:
+
+        profile = row[1]
+
+        if isinstance(profile, str):
+
+            profile = json.loads(profile)
+
+        datasets.append(
+            {
+                "dataset_name": row[0],
+                "profile": profile,
+                "created_at": row[2]
+            }
+        )
+
+    return datasets
+
+
+# =====================================================
+# CHECK DATASET OWNERSHIP
+# =====================================================
+
+def user_owns_dataset(
+    user_email,
+    dataset_name
+):
+
+    user_email = str(
+        user_email
+    ).strip().lower()
+
+    dataset_name = str(
+        dataset_name
+    ).strip()
+
+    query = """
+    SELECT EXISTS (
+
+        SELECT 1
+
+        FROM dataset_memory
+
+        WHERE user_email = :user_email
+
+        AND dataset_name = :dataset_name
+
+    );
+    """
+
+    with engine.connect() as conn:
+
+        result = conn.execute(
+            text(query),
+            {
+                "user_email": user_email,
+                "dataset_name": dataset_name
+            }
+        )
+
+        return bool(
+            result.scalar()
+        )
+
+
+# =====================================================
+# DELETE DATASET MEMORY
+# =====================================================
+
+def delete_dataset_memory(
+    user_email,
+    dataset_name
+):
+
+    user_email = str(
+        user_email
+    ).strip().lower()
+
+    dataset_name = str(
+        dataset_name
+    ).strip()
+
+    query = """
+    DELETE FROM dataset_memory
+
+    WHERE user_email = :user_email
+
+    AND dataset_name = :dataset_name;
+    """
+
+    with engine.begin() as conn:
+
+        result = conn.execute(
+            text(query),
+            {
+                "user_email": user_email,
+                "dataset_name": dataset_name
+            }
+        )
+
+    return result.rowcount > 0
 
 
 # =====================================================

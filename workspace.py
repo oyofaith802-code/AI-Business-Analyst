@@ -273,6 +273,57 @@ def import_excel_sheet(
 # REGISTER EXCEL TABLES
 # ============================================================
 
+def create_workspace_table():
+    from database import engine
+    from sqlalchemy import text
+
+    query = """
+    CREATE TABLE IF NOT EXISTS workspace (
+        id SERIAL PRIMARY KEY,
+        user_email TEXT NOT NULL,
+        file_name TEXT,
+        table_name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+
+    with engine.connect() as conn:
+        conn.execute(text(query))
+        conn.commit()
+
+
+def save_workspace(user_email, filename, table_name):
+    create_workspace_table()
+
+    query = """
+    INSERT INTO workspace (user_email, file_name, table_name)
+    VALUES (:user_email, :filename, :table_name)
+    """
+
+    with engine.connect() as conn:
+        conn.execute(text(query), {
+            "user_email": user_email,
+            "filename": filename,
+            "table_name": table_name
+        })
+        conn.commit()
+
+
+def get_user_tables(user_email):
+    create_workspace_table()
+
+    query = """
+    SELECT table_name
+    FROM workspace
+    WHERE user_email = :user_email
+    ORDER BY created_at DESC
+    """
+
+    with engine.connect() as conn:
+        result = conn.execute(text(query), {"user_email": user_email})
+        return [row[0] for row in result.fetchall()]
+
+
 def register_excel_tables(
     user_email,
     filename,

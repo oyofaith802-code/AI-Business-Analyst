@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # AI BUSINESS ANALYST - UNIVERSAL DATASET UPLOAD
 # ============================================================
 
@@ -24,6 +24,8 @@ from plan_manager import (
     upload_allowed,
     record_upload
 )
+
+import hashlib
 
 
 # ============================================================
@@ -564,6 +566,14 @@ def table_exists(table_name):
 # CREATE UNIQUE TABLE NAME
 # ============================================================
 
+def create_user_table_name(base_name, user_email):
+    user_key = hashlib.sha256(
+        str(user_email).strip().lower().encode("utf-8")
+    ).hexdigest()[:12]
+
+    return f"{base_name}_{user_key}"
+
+
 def create_unique_table_name(base_name):
 
     table_name = base_name
@@ -601,7 +611,7 @@ def save_dataset(
         )
 
         print(
-            f"✅ Dataset saved: {table_name}"
+            f"âœ… Dataset saved: {table_name}"
         )
 
         # ----------------------------------------------------
@@ -611,17 +621,18 @@ def save_dataset(
         try:
 
             save_existing_table_schema(
+                user_email,
                 table_name
             )
 
             print(
-                "✅ Schema saved."
+                "âœ… Schema saved."
             )
 
         except Exception as e:
 
             print(
-                f"⚠️ Schema warning: {e}"
+                f"âš ï¸ Schema warning: {e}"
             )
 
         # ----------------------------------------------------
@@ -641,13 +652,13 @@ def save_dataset(
             )
 
             print(
-                "✅ Dataset profile saved."
+                "âœ… Dataset profile saved."
             )
 
         except Exception as e:
 
             print(
-                f"⚠️ Profile warning: {e}"
+                f"âš ï¸ Profile warning: {e}"
             )
 
         return True
@@ -655,7 +666,7 @@ def save_dataset(
     except Exception as e:
 
         print(
-            f"❌ Database save failed: {e}"
+            f"âŒ Database save failed: {e}"
         )
 
         return False
@@ -704,7 +715,7 @@ def process_upload(
     except Exception as e:
 
         print(
-            f"❌ Could not check upload limit: {e}"
+            f"âŒ Could not check upload limit: {e}"
         )
 
         return {
@@ -837,8 +848,13 @@ def process_upload(
         filename
     )
 
+    table_name = create_user_table_name(
+        base_name,
+        user_email
+    )
+
     table_name = create_unique_table_name(
-        base_name
+        table_name
     )
 
     # --------------------------------------------------------
@@ -873,13 +889,13 @@ def process_upload(
         )
 
         print(
-            "✅ Upload usage recorded."
+            "âœ… Upload usage recorded."
         )
 
     except Exception as e:
 
         print(
-            f"⚠️ Upload saved, but usage could not be recorded: {e}"
+            f"âš ï¸ Upload saved, but usage could not be recorded: {e}"
         )
 
     # --------------------------------------------------------
@@ -944,11 +960,12 @@ if __name__ == "__main__":
     ):
 
         print(
-            f"• {extension}"
+            f"â€¢ {extension}"
         )
 
     print()
 
     print(
-        "✅ Upload module ready."
+        "âœ… Upload module ready."
     )
+

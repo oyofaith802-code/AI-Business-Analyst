@@ -1,72 +1,26 @@
-import pandas as pd
+﻿import pandas as pd
 
 from chart_generator import (
     create_chart,
-    choose_chart_type,
+    detect_chart_type,
     detect_chart_columns
 )
 
-
-# ============================================================
-# TEST DATA
-# ============================================================
-
-data = pd.DataFrame(
-    {
-        "category": [
-            "Furniture",
-            "Electronics"
-        ],
-
-        "total_revenue": [
-            115000,
-            270000
-        ]
-    }
-)
-
-
-# ============================================================
-# BUSINESS QUESTION
-# ============================================================
+data = pd.DataFrame({
+    "category": ["Furniture", "Electronics"],
+    "total_revenue": [115000, 270000]
+})
 
 question = "What is our revenue by category?"
 
+chart_type = detect_chart_type(data)
 
-# ============================================================
-# DETECT CHART TYPE
-# ============================================================
+print(f"Chart type: {chart_type}")
 
-chart_type = choose_chart_type(
-    question,
-    data
-)
+x_column, y_column = detect_chart_columns(data)
 
-print(
-    f"Chart type: {chart_type}"
-)
-
-
-# ============================================================
-# DETECT COLUMNS
-# ============================================================
-
-x_column, y_column = detect_chart_columns(
-    data
-)
-
-print(
-    f"X column: {x_column}"
-)
-
-print(
-    f"Y column: {y_column}"
-)
-
-
-# ============================================================
-# CREATE CHART
-# ============================================================
+print(f"X column: {x_column}")
+print(f"Y column: {y_column}")
 
 figure = create_chart(
     result=data,
@@ -76,21 +30,4 @@ figure = create_chart(
     y_column=y_column
 )
 
-
-# ============================================================
-# DISPLAY
-# ============================================================
-
-if figure:
-
-    print(
-        "✅ Chart created successfully."
-    )
-
-    figure.show()
-
-else:
-
-    print(
-        "❌ Chart creation failed."
-    )
+print("Chart created successfully:", figure is not None)

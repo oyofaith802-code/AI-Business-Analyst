@@ -19,14 +19,26 @@ engine = create_engine(
 )
 
 
-# Function to run SQL queries
-def run_query(query):
-    with engine.connect() as conn:
-        result = conn.execute(text(query))
-        return result.fetchall()
+def run_query(query, params=None):
+    """
+    Execute a SQL query.
+
+    Returns rows for SELECT/RETURNING queries.
+    Returns [] for statements that do not return rows.
+    """
+
+    with engine.begin() as conn:
+        result = conn.execute(
+            text(query),
+            params or {}
+        )
+
+        if result.returns_rows:
+            return result.fetchall()
+
+        return []
 
 
-# Test connection
 if __name__ == "__main__":
     try:
         with engine.connect() as conn:

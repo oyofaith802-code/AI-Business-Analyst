@@ -1,16 +1,27 @@
-from ollama import chat
+import os
+import ollama
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
 
 
 def ask_ai(prompt):
+    if not prompt:
+        raise ValueError("AI prompt is required.")
 
-    response = chat(
-        model="llama3.2",
+    response = ollama.chat(
+        model=OLLAMA_MODEL,
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
-        ]
+        ],
+        options={
+            "temperature": 0
+        }
     )
 
-    return response["message"]["content"]
+    return response["message"]["content"].strip()

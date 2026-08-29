@@ -1,4 +1,4 @@
-import re
+﻿import re
 from llm import ask_ai
 from schema_memory import get_schema
 
@@ -9,7 +9,7 @@ from schema_memory import get_schema
 
 def analyze_question(question, user_email="solomonenamudu@gmail.com"):
 
-    print("\n🔍 Reading database schema...")
+    # SIMPLE COUNT QUESTIONS`n    if re.search(r"\b(total\s+number\s+of\s+orders|how\s+many\s+orders|number\s+of\s+orders|total\s+orders)\b", question, re.IGNORECASE):`n        return {`n            "answerable": True,`n            "reason": "The total number of orders can be calculated by counting order records.",`n            "tables": ["orders"],`n            "columns": ["orders.order_id"],`n            "raw_response": "RULE_BASED_COUNT"`n        }`n`n    print("\nðŸ” Reading database schema...")
 
     schema = get_schema(user_email)
 
@@ -45,8 +45,8 @@ IMPORTANT RULES:
 7. If customer information is requested, customers may be required.
 8. If payment information is requested, payments may be required.
 9. If the question requires multiple tables, include ALL of them.
-10. Do not invent tables or columns.
-11. A question is ANSWERABLE if the required information exists
+10. Do not invent tables or columns.`r`n11. For questions asking for the total number of records, rows, orders, customers, products, payments, etc., use COUNT(*) or COUNT of the appropriate ID column. Do NOT join a table with itself.`r`n12. A simple count question usually requires only one table.`r`n13. Do not interpret repeated words such as `orders` as a reason to select the same table twice.
+14. A question is ANSWERABLE if the required information exists
     in the schema and the tables can logically be joined.
 
 COMMON RELATIONSHIPS:
@@ -72,7 +72,7 @@ BUSINESS QUESTION:
 {question}
 """
 
-    print("\n🧠 Checking whether the question can be answered...")
+    # SIMPLE COUNT QUESTIONS`n    if re.search(r"\b(total\s+number\s+of\s+orders|how\s+many\s+orders|number\s+of\s+orders|total\s+orders)\b", question, re.IGNORECASE):`n        return {`n            "answerable": True,`n            "reason": "The total number of orders can be calculated by counting order records.",`n            "tables": ["orders"],`n            "columns": ["orders.order_id"],`n            "raw_response": "RULE_BASED_COUNT"`n        }`n`n    print("\nðŸ§  Checking whether the question can be answered...")
 
     try:
 
@@ -195,10 +195,11 @@ BUSINESS QUESTION:
 # TEST MODE
 # ============================================================
 
+
 if __name__ == "__main__":
 
     print("\n" + "=" * 60)
-    print("🤖 AI BUSINESS ANALYST - QUESTION ANALYZER")
+    print("AI BUSINESS ANALYST - QUESTION ANALYZER")
     print("=" * 60)
 
     question = input(
@@ -210,30 +211,20 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
 
     if result["answerable"]:
-
-        print("✅ ANSWERABLE")
-
+        print("ANSWERABLE")
     else:
-
-        print("❌ NOT ANSWERABLE")
-
+        print("NOT ANSWERABLE")
 
     print("\nReason:")
     print(result["reason"])
 
-
     print("\nRelevant tables:")
 
     for table in result["tables"]:
-
         print(f"• {table}")
-
 
     print("\nRelevant columns:")
 
     for column in result["columns"]:
-
         print(f"• {column}")
 
-
-    print("\n" + "=" * 60)

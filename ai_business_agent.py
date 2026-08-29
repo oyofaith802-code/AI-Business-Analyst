@@ -2,9 +2,17 @@ from sql_agent import generate_sql
 from database import run_query
 
 
-def ask_business(question):
+def ask_business(
+    question,
+    tables,
+    user_email=None
+):
 
-    sql = generate_sql(question)
+    sql = generate_sql(
+        question,
+        tables,
+        user_email
+    )
 
     print("Generated SQL:")
     print(sql)
@@ -15,10 +23,3 @@ def ask_business(question):
     print(result)
 
     return result
-
-
-answer = ask_business(
-    "How many delivered orders do we have?"
-)
-
-print(answer)
