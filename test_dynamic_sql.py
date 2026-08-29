@@ -1,11 +1,13 @@
 from sql_agent import generate_sql
 
 
-sql = generate_sql(
-    "How many orders were delivered?",
-    "olist_orders_dataset"
-)
+def test_generate_sql():
+    sql = generate_sql(
+        question="How many orders were delivered?",
+        tables=["olist_orders_dataset"],
+        user_email="solomonenamudu@gmail.com"
+    )
 
-
-print("Generated SQL:")
-print(sql)
+    assert isinstance(sql, str)
+    assert sql.strip()
+    assert sql.strip().upper().startswith(("SELECT", "WITH"))

@@ -4,62 +4,41 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-conn = psycopg2.connect(
-    host="127.0.0.1",
-    port=5432,
-    database=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD")
-)
 
-try:
-    cur = conn.cursor()
-
-    print("Connected directly to PostgreSQL")
-    print()
-
-    cur.execute(
-        """
-        SELECT id, user_email, table_name
-        FROM schema_memory
-        WHERE table_name = %s
-        """,
-        ("test_sales",)
+def main():
+    conn = psycopg2.connect(
+        host="127.0.0.1",
+        port=5432,
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD")
     )
 
-    print("BEFORE:")
-    for row in cur.fetchall():
-        print(row)
+    try:
+        cur = conn.cursor()
 
-    cur.execute(
-        """
-        UPDATE schema_memory
-        SET user_email = %s
-        WHERE table_name = %s
-        """,
-        ("solomonenamudu@gmail.com", "test_sales")
-    )
+        print("Connected directly to PostgreSQL")
+        print()
 
-    print()
-    print("ROWS UPDATED:", cur.rowcount)
+        cur.execute(
+            """
+            SELECT id, user_email, table_name
+            FROM schema_memory
+            WHERE table_name = %s
+            ORDER BY id
+            """,
+            ("test_sales",)
+        )
 
-    conn.commit()
+        print("SCHEMA MEMORY:")
+        for row in cur.fetchall():
+            print(row)
 
-    cur.execute(
-        """
-        SELECT id, user_email, table_name
-        FROM schema_memory
-        WHERE table_name = %s
-        """,
-        ("test_sales",)
-    )
+        cur.close()
 
-    print()
-    print("AFTER:")
+    finally:
+        conn.close()
 
-    for row in cur.fetchall():
-        print(row)
 
-finally:
-    cur.close()
-    conn.close()
+if __name__ == "__main__":
+    main()
