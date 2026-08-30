@@ -21,6 +21,9 @@ from document_memory import (
     delete_document
 )
 
+from manual_data import ingest_manual_dataframe
+from image_scanner import scan_business_record
+
 from excel_database import (
     import_excel_workbook,
     register_excel_tables
@@ -740,6 +743,29 @@ if st.session_state.selected_document:
 
 
 # ============================================================
+
+# ============================================================
+# CONTACT / ABOUT ALOKO
+# ============================================================
+
+with st.sidebar:
+
+    st.divider()
+
+    st.header("About Aloko")
+
+    st.caption("AI Business Analyst")
+
+    st.write("Built by Jeremiah Solomon")
+    st.write("AI/ML Engineer")
+
+    st.markdown("**Contact**")
+    st.write("📧 solomonenamudu@gmail.com")
+    st.write("📱 +2348113019723")
+    st.markdown(
+        "[GitHub](https://github.com/oyofaith802-code)"
+    )
+
 # MAIN PAGE
 # ============================================================
 
@@ -753,6 +779,566 @@ st.caption(
 
 
 # ============================================================
+# ============================================================
+# ALOKO BUSINESS DATA INPUT
+# ============================================================
+
+st.subheader("👋 Hello! I'm Aloko, your AI Business Assistant.")
+
+st.write(
+    "I can help you understand your sales, products, expenses, "
+    "customers, and other business data."
+)
+
+st.caption(
+    "You can upload a file or enter your business data manually. "
+    "Photo scanning and voice features will be added next."
+)
+
+st.subheader(
+    "How would you like to provide your business data?"
+)
+
+input_method = st.radio(
+    "Choose an option",
+    [
+        "📁 Upload File",
+        "✍️ Enter Data Manually",
+        "📷 Scan Records",
+        "🎤 Voice Input"
+    ],
+    horizontal=True,
+    key="business_input_method"
+)
+
+
+# ============================================================
+# MANUAL DATA ENTRY
+# ============================================================
+
+if input_method == "✍️ Enter Data Manually":
+
+    st.info(
+        "Enter your business records below. "
+        "You can add or remove rows."
+    )
+
+    dataset_name = st.text_input(
+        "Dataset name",
+        value="my_business_data",
+        key="manual_dataset_name"
+    )
+
+    st.caption(
+        "Example columns: Product, Quantity, Price, Date, Customer"
+    )
+
+    default_data = pd.DataFrame([
+        {
+            "Product": "",
+            "Quantity": 0,
+            "Price": 0.0
+        }
+    ])
+
+    manual_dataframe = st.data_editor(
+        default_data,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="manual_business_editor"
+    )
+
+    if st.button(
+        "💾 Save Business Data",
+        key="save_manual_data",
+        width="stretch"
+    ):
+
+        try:
+
+            data_to_save = manual_dataframe.dropna(
+                how="all"
+            ).copy()
+
+            if not data_to_save.empty:
+
+                with st.spinner(
+                    "Aloko is saving your business data..."
+                ):
+
+                    result = ingest_manual_dataframe(
+                        data_to_save,
+                        user_email,
+                        dataset_name.strip()
+                        or "manual_data"
+                    )
+
+                st.success(
+                    "✅ Your business data has been saved successfully."
+                )
+
+                st.write(
+                    f"**Rows:** {result['rows']}"
+                )
+
+                st.write(
+                    f"**Columns:** {result['columns']}"
+                )
+
+                st.dataframe(
+                    result["dataframe"],
+                    use_container_width=True
+                )
+
+                st.info(
+                    "You can now ask Aloko questions about this data."
+                )
+
+            else:
+
+                st.warning(
+                    "Please enter at least one business record."
+                )
+
+        except Exception as e:
+
+            st.error(
+                f"❌ Could not save your business data: {e}"
+            )
+
+
+# ============================================================
+# TELL ALOKO - NATURAL LANGUAGE BUSINESS DATA
+# ============================================================
+
+elif input_method == "💬 Tell Aloko":
+
+    st.info(
+        "Tell Aloko about your business in your own words. "
+        "Aloko will organize the information into a table "
+        "before saving it."
+    )
+
+    natural_text = st.text_area(
+        "Tell Aloko what happened",
+        placeholder=(
+            "Example: I sold 20 bags of rice at 45000 each "
+            "and 15 bags of beans at 30000 each."
+        ),
+        height=180,
+        key="natural_business_text"
+    )
+
+    natural_dataset_name = st.text_input(
+        "Dataset name",
+        value="aloko_business_data",
+        key="natural_dataset_name"
+    )
+
+    if st.button(
+        "🤖 Let Aloko Organize It",
+        key="parse_natural_data",
+        width="stretch"
+    ):
+
+        if not natural_text.strip():
+
+            st.warning(
+                "Please tell Aloko about your business data first."
+            )
+
+        else:
+
+            try:
+
+                with st.spinner(
+                    "Aloko is understanding your business information..."
+                ):
+
+                    from natural_language_data import (
+                        parse_business_text
+                    )
+
+                    extracted_dataframe = (
+                        parse_business_text(
+                            natural_text
+                        )
+                    )
+
+                st.success(
+                    "✅ Aloko successfully organized your information."
+                )
+
+                st.subheader(
+                    "📊 Review Your Data"
+                )
+
+                st.dataframe(
+                    extracted_dataframe,
+                    use_container_width=True
+                )
+
+                st.caption(
+                    "Please review the information before saving it."
+                )
+
+                if st.button(
+                    "✅ Save to Business Data",
+                    key="save_natural_data",
+                    width="stretch"
+                ):
+
+                    with st.spinner(
+                        "Saving your business data..."
+                    ):
+
+                        result = ingest_manual_dataframe(
+                            extracted_dataframe,
+                            user_email,
+                            natural_dataset_name.strip()
+                            or "aloko_business_data"
+                        )
+
+                    st.success(
+                        "🎉 Your business data has been saved."
+                    )
+
+                    st.write(
+                        f"**Rows:** {result['rows']}"
+                    )
+
+                    st.write(
+                        f"**Columns:** {result['columns']}"
+                    )
+
+                    st.info(
+                        "You can now ask Aloko questions about this data."
+                    )
+
+            except Exception as e:
+
+                st.error(
+                    f"❌ Aloko could not organize the information: {e}"
+                )
+# ============================================================
+# ALOKO - SCAN BUSINESS RECORDS
+# ============================================================
+
+elif input_method == "📷 Scan Records":
+
+    st.info(
+        "Take or upload a clear picture of your business records. "
+        "Aloko will read the image and organize the information for you."
+    )
+
+    scanned_file = st.file_uploader(
+        "Upload a business record image",
+        type=["jpg", "jpeg", "png", "webp"],
+        key="business_record_scanner"
+    )
+
+    scan_dataset_name = st.text_input(
+        "Dataset name",
+        value="scanned_business_data",
+        key="scan_dataset_name"
+    )
+
+    if scanned_file is not None:
+
+        st.image(
+            scanned_file,
+            caption="Business record to scan",
+            use_container_width=True
+        )
+
+        if st.button(
+            "Scan with Aloko",
+            key="scan_business_record",
+            width="stretch"
+        ):
+
+            temp_path = None
+
+            try:
+
+                suffix = os.path.splitext(
+                    scanned_file.name
+                )[1].lower()
+
+                with tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=suffix
+                ) as tmp:
+
+                    tmp.write(
+                        scanned_file.getbuffer()
+                    )
+
+                    temp_path = tmp.name
+
+                with st.spinner(
+                    "Aloko is reading your business record..."
+                ):
+
+                    result = scan_business_record(
+                        temp_path
+                    )
+
+                st.success(
+                    "Aloko successfully read the record."
+                )
+
+                st.subheader(
+                    "Extracted Information"
+                )
+
+                st.text_area(
+                    "Text detected from image",
+                    result["text"],
+                    height=150,
+                    key="scanned_ocr_text"
+                )
+
+                st.subheader(
+                    "Review Your Data"
+                )
+
+                st.dataframe(
+                    result["dataframe"],
+                    use_container_width=True
+                )
+
+                st.caption(
+                    "Review the extracted information before saving it."
+                )
+
+                if st.button(
+                    "Save to Business Data",
+                    key="save_scanned_data",
+                    width="stretch"
+                ):
+
+                    with st.spinner(
+                        "Saving scanned business data..."
+                    ):
+
+                        saved_result = ingest_manual_dataframe(
+                            result["dataframe"],
+                            user_email,
+                            scan_dataset_name.strip()
+                            or "scanned_business_data"
+                        )
+
+                    st.success(
+                        "Scanned business data has been saved successfully."
+                    )
+
+                    st.write(
+                        f"Rows: {saved_result['rows']}"
+                    )
+
+                    st.write(
+                        f"Columns: {saved_result['columns']}"
+                    )
+
+                    st.info(
+                        "You can now ask Aloko questions about the scanned data."
+                    )
+
+            except Exception as e:
+
+                st.error(
+                    f"Aloko could not scan the image: {e}"
+                )
+
+            finally:
+
+                if temp_path:
+
+                    try:
+
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+
+                    except Exception:
+                        pass
+
+elif input_method == "🎤 Voice Input":
+
+    st.info(
+        "Speak naturally about your business. "
+        "Aloko will transcribe your voice, organize the information, "
+        "and let you review it before saving."
+    )
+
+    st.subheader("🎤 Talk to Aloko")
+
+    audio_data = st.audio_input(
+        "Record your business data"
+    )
+
+    st.caption(
+        "Example: I sold 20 bags of rice at 45,000 each "
+        "and 15 bags of beans at 30,000 each."
+    )
+
+    voice_dataset_name = st.text_input(
+        "Dataset name",
+        value="voice_business_data",
+        key="voice_dataset_name"
+    )
+
+    if audio_data is not None:
+
+        st.audio(
+            audio_data
+        )
+
+        if st.button(
+            "🤖 Let Aloko Understand My Voice",
+            key="process_voice_business_data",
+            width="stretch"
+        ):
+
+            temp_path = None
+
+            try:
+
+                with tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=".wav"
+                ) as tmp:
+
+                    tmp.write(
+                        audio_data.getbuffer()
+                    )
+
+                    temp_path = tmp.name
+
+                with st.spinner(
+                    "Aloko is listening and organizing your business information..."
+                ):
+
+                    from voice_input import (
+                        process_voice_business_data
+                    )
+
+                    result = process_voice_business_data(
+                        temp_path
+                    )
+
+                st.session_state[
+                    "voice_business_result"
+                ] = result
+
+                st.success(
+                    "✅ Aloko successfully understood your voice."
+                )
+
+            except Exception as e:
+
+                st.error(
+                    f"❌ Aloko could not process the voice recording: {e}"
+                )
+
+            finally:
+
+                if temp_path:
+
+                    try:
+
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+
+                    except Exception:
+                        pass
+
+
+    if "voice_business_result" in st.session_state:
+
+        voice_result = st.session_state[
+            "voice_business_result"
+        ]
+
+        st.subheader(
+            "📝 What Aloko Heard"
+        )
+
+        st.text_area(
+            "Transcribed speech",
+            voice_result["text"],
+            height=150,
+            key="voice_transcription"
+        )
+
+        st.caption(
+            f"Detected language: {voice_result['language']}"
+        )
+
+        st.subheader(
+            "📊 Review Your Data"
+        )
+
+        st.dataframe(
+            voice_result["dataframe"],
+            use_container_width=True
+        )
+
+        st.caption(
+            "Review the extracted information before saving it."
+        )
+
+        if st.button(
+            "✅ Save Voice Data to Business Data",
+            key="save_voice_business_data",
+            width="stretch"
+        ):
+
+            try:
+
+                with st.spinner(
+                    "Saving your voice business data..."
+                ):
+
+                    saved_result = ingest_manual_dataframe(
+                        voice_result["dataframe"],
+                        user_email,
+                        voice_dataset_name.strip()
+                        or "voice_business_data"
+                    )
+
+                st.success(
+                    "🎉 Your voice business data has been saved successfully."
+                )
+
+                st.write(
+                    f"**Rows:** {saved_result['rows']}"
+                )
+
+                st.write(
+                    f"**Columns:** {saved_result['columns']}"
+                )
+
+                st.info(
+                    "You can now ask Aloko questions about this data."
+                )
+
+                del st.session_state[
+                    "voice_business_result"
+                ]
+
+            except Exception as e:
+
+                st.error(
+                    f"❌ Could not save the voice data: {e}"
+                )
+
+elif input_method == "📁 Upload File":
+
+    st.info(
+        "📁 Use the Upload File section in the sidebar "
+        "for CSV, Excel, PDF, DOCX or TXT files."
+    )
 # QUESTION AREA
 # ============================================================
 
@@ -933,3 +1519,11 @@ st.caption(
     "AI Business Analyst • PostgreSQL • Ollama • "
     "Document Intelligence • Excel Intelligence"
 )
+
+
+
+
+
+
+
+

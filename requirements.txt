@@ -11,3 +11,5 @@ matplotlib
 bcrypt
 pypdf
 python-docx
+easyocr
+faster-whisper
