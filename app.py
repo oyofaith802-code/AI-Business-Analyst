@@ -22,7 +22,6 @@ from document_memory import (
 )
 
 from manual_data import ingest_manual_dataframe
-from image_scanner import scan_business_record
 
 from excel_database import (
     import_excel_workbook,
@@ -1079,6 +1078,8 @@ elif input_method == "📷 Scan Records":
                 with st.spinner(
                     "Aloko is reading your business record..."
                 ):
+
+                    from image_scanner import scan_business_record
 
                     result = scan_business_record(
                         temp_path
