@@ -9,3 +9,5 @@ openpyxl
 numpy
 matplotlib
 bcrypt
+pypdf
+python-docx
