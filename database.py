@@ -3,15 +3,65 @@ from dotenv import load_dotenv
 import os
 from urllib.parse import quote_plus
 
-# Load environment variables
+import streamlit as st
+
+
+# Load local .env variables
 load_dotenv()
 
+
+def get_config(key, default=None):
+    """
+    Get configuration from Streamlit Cloud Secrets first,
+    then fall back to local environment variables.
+    """
+
+    try:
+        value = st.secrets.get(key)
+
+        if value is not None:
+            return value
+
+    except Exception:
+        pass
+
+    return os.getenv(key, default)
+
+
 # Get database details
-USER = os.getenv("DB_USER")
-PASSWORD = quote_plus(os.getenv("DB_PASSWORD"))
-HOST = os.getenv("DB_HOST")
-PORT = os.getenv("DB_PORT")
-DATABASE = os.getenv("DB_NAME")
+USER = get_config("DB_USER")
+PASSWORD = get_config("DB_PASSWORD")
+HOST = get_config("DB_HOST")
+PORT = get_config("DB_PORT", "5432")
+DATABASE = get_config("DB_NAME")
+
+
+# Validate required settings
+missing = []
+
+if not USER:
+    missing.append("DB_USER")
+
+if not PASSWORD:
+    missing.append("DB_PASSWORD")
+
+if not HOST:
+    missing.append("DB_HOST")
+
+if not DATABASE:
+    missing.append("DB_NAME")
+
+
+if missing:
+    raise RuntimeError(
+        "Missing database configuration: "
+        + ", ".join(missing)
+    )
+
+
+# Encode password safely for PostgreSQL URL
+PASSWORD = quote_plus(str(PASSWORD))
+
 
 # Create database engine
 engine = create_engine(
@@ -28,6 +78,7 @@ def run_query(query, params=None):
     """
 
     with engine.begin() as conn:
+
         result = conn.execute(
             text(query),
             params or {}
@@ -40,9 +91,19 @@ def run_query(query, params=None):
 
 
 if __name__ == "__main__":
+
     try:
+
         with engine.connect() as conn:
-            print("Database connected successfully!")
+
+            print(
+                "Database connected successfully!"
+            )
+
     except Exception as e:
-        print("Database connection failed:")
+
+        print(
+            "Database connection failed:"
+        )
+
         print(e)
